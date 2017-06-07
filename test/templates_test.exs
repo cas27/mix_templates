@@ -88,10 +88,9 @@ defmodule TemplatesTest do
     assert { :error, msg } = MT.create_or_merge({:maybe_update, "a"}, "b", dummy_assigns)
     assert msg == "Updating an existing project is not yet supported"
   end
-  
-  
+
   test "can copy a file and expand the content" do
-    assigns = %{ one: "number 1", two: "deux" }
+    assigns = %{ one: "number 1", two: "deux", skip_eex: [] }
     source  = "_in"
     dest    = "_out"
     File.write!(source, "first: <%= @one %>\nsecond: <%= @two %>")
@@ -101,9 +100,20 @@ defmodule TemplatesTest do
     File.rm_rf!(dest)
     assert result == "first: number 1\nsecond: deux"
   end
+
+  test "skips eex eval for listed file extensions" do
+    assigns = %{ skip_eex: ["png"] }
+    source = "_in.png"
+    dest = "_out.png"
+    File.write!(source, <<137>>)
+    MT.copy_and_expand(source, dest, assigns: assigns)
+    assert File.exists?("_out.png")
+    File.rm_rf!(source)
+    File.rm_rf!(dest)
+  end
   
   test "renames a target file if its name is $PROJECT_NAME$" do
-    assigns = %{ one: "number 1", two: "deux", project_name: "fred" }
+    assigns = %{ one: "number 1", two: "deux", project_name: "fred", skip_eex: [] }
     source  = Path.join([__DIR__, "data/tree1/$PROJECT_NAME$"])
     dest    = "_out"
     MT.copy_dir(source, dest, assigns: assigns)

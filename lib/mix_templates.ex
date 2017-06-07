@@ -459,6 +459,16 @@ end
       end
 
       @doc """
+      Return a list of filename extensions that should not be
+      evaluated by EEx.
+      """
+      def skip_eex do
+        unquote([opts[:skip_eex] | ~w{png jpg jpeg gif avi mov}]
+                |> List.flatten
+                |> Enum.uniq)
+      end
+
+      @doc """
       Return the absolute path to the tree that is to be copied when
       instantiating this template. This top-level dir will typically
       just contain a directory called `$APP_NAME$`.
@@ -603,7 +613,12 @@ end
 
     defp copy_and_expand(source, dest, assigns) do
       try do
-        content = EEx.eval_file(source, assigns, [ trim: true ])
+        ext = String.split(source, ".") |> List.last 
+        content = 
+          case Enum.find(assigns[:assigns][:skip_eex], &(&1 == ext)) do
+            nil -> EEx.eval_file(source, assigns, [ trim: true ])
+            _   -> File.read!(source)
+          end
         MG.create_file(dest, content)
         mode = File.stat!(source).mode
         File.chmod!(dest, mode)
